@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<title>INFO 3300: Project 1</title>
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script src="https://d3js.org/topojson.v1.min.js"></script>
+<style>
+  .outline {
+    stroke: black;
+    stroke-width: 1px;
+    fill: none;
+  }
+
+  h1 {
+    font-family: Arial;
+    text-align: center;
+    padding: 10px;
+    background-color: #4682b4;
+    color: white;
+  }
+
+  h3 {
+    font-family: Arial;
+    font-size: 15px;
+  }
+</style>
+
+<body>
+  <h1>Visualization of US Government: Payroll Data for 2019</h1>
+
+
+  <h3>
+    Group Members: Fatima Mahmoud (fam76) Ayesha Kemal (ak2235) Zoe Gonzalez-Llorens (zg226)
+  </h3>
+  <p id="bar">
+
+    <svg id="usbar" height="600" width="900"></svg>
+
+    <script>
+      //a lot of the bar graph code is modeled after the 3/15 class
+      d3.json("2019_state.json").then((data) => {
+
+        //clean data and add percent column to find percentages of payrolls of total payroll
+        data.forEach((d, i) => {
+          d["Total March Payroll (whole dollars)"] = Number(d["Total March Payroll (whole dollars)"].replace(/,/g, ""));
+          d["Percent"] = Number(d["Total March Payroll (whole dollars)"] / (24709368217));
+
+        });
+
+
+        //filter 'total' data and states other than general US
+        data = data.filter((d) => { return (d['State']) == "United States" && d['Government Function'] != "Total - All Government Employment Functions" && d['Government Function'] != "Education Total" && d['Government Function'] != "Police Protection Total" && d['Government Function'] != "Education - Higher Education Total" && d['Government Function'] != "Education - Elementary and Secondary Total" && d['Government Function'] != "Fire Protection Total"; })
+
+        //load svg and make variables
+        const svg = d3.select("#usbar");
+        const width = svg.attr("width");
+        const height = svg.attr("height");
+        const margin = { top: 50, right: 80, bottom: 200, left: 50 };
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+        let annotations = svg.append("g").attr("id", "annotations");
+        let chartArea = svg.append("g").attr("id", "points")
+          .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        //add title
+        chartArea.append("text")
+          .attr("x", ((width / 2) - 70))
+          .attr("y", (margin.top - 65))
+          .attr("text-anchor", "middle")
+          .style("font-size", "16px")
+          .style("text-decoration", "underline")
+          .style("font-family", "Arial")
+          .text("US Government: All Payroll Data for March 2019");
+
+
+        //scale for percentage for y axis
+        const percentScale = d3.scaleLinear().domain([0, 0.5]).range([chartHeight, 0]);
+
+        //scale for gov functions for y axis
+        const gov_func = d3.map(data, d => d["Government Function"])
+
+        const govScale = d3.scaleBand()
+          .domain(gov_func)
+          .range([0, chartWidth])
+          .padding(0.05);
+
+        //create and call y axis and grid lines
+        let leftAxis = d3.axisLeft(percentScale)
+          .tickFormat(d3.format('.0%'));
+        let leftGridlines = d3.axisLeft(percentScale)
+          .tickSize(-chartWidth - 10)
+          .tickFormat("")
+        annotations.append("g")
+          .attr("class", "y axis")
+          .attr("transform", `translate(${margin.left - 10},${margin.top})`)
+          .call(leftAxis)
+        annotations.append("g")
+          .attr("class", "y gridlines")
+          .attr("transform", `translate(${margin.left - 10},${margin.top})`)
+          .call(leftGridlines);
+
+        //create and call x axis and axis labels
+        let bottomAxis = d3.axisBottom(govScale)
+        annotations.append("g")
+          .attr("class", "x axis")
+          .attr("transform", `translate(${margin.left},${chartHeight + margin.top + 10})`)
+          .call(bottomAxis)
+          .selectAll("text")
+          .attr("y", 0)
+          .attr("x", 6)
+          .attr("dy", ".35em")
+          .attr("transform", "rotate(45)")
+          .style("text-anchor", "start");
+
+        //make rectangles
+        chartArea.selectAll('rect.bar').data(data)
+          .join('rect').attr('class', 'bar')
+          .attr("fill", "steelblue")
+          .attr("x", d => govScale(d["Government Function"]))
+          .attr("y", d => percentScale(d["Percent"]))
+          .attr("height", d => percentScale(0) - percentScale(d["Percent"]))
+          .attr("width", govScale.bandwidth());
+      })
+
+    </script>
+  </p>
+  <h1>Visualization of State Government: Payroll Data for 2019</h1>
+  <p id="map">
+
+    <svg id="usmap" height="600" width="900"></svg>
+
+    <script>
+
+      const svg = d3.select("#usmap");
+      const width = svg.attr("width");
+      const height = svg.attr("height");
+      const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+      const mapWidth = width - margin.left - margin.right;
+      const mapHeight = height - margin.top - margin.bottom;
+      const map = svg.append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const requestData = async function () {
+        const us = await d3.json("us1.json");
+
+        var states = topojson.feature(us, us.objects.states);
+        var statesMesh = topojson.mesh(us, us.objects.states);
+
+        var projection = d3.geoAlbersUsa().fitSize([mapWidth, mapHeight], states);
+        var path = d3.geoPath().projection(projection);
+
+        var graticule = d3.geoGraticule10();
+
+        map.selectAll("path.state").data(states.features)
+          .join("path")
+          .attr("class", "state")
+          .attr("note", d => d.id)
+          .attr("d", path);
+
+        map.append("path").datum(statesMesh)
+          .attr("class", "outline")
+          .attr("d", path);
+
+        //add title
+
+        map.append("text")
+          .attr("x", (width / 2))
+          .attr("y", (margin.top / 2))
+          .attr("text-anchor", "middle")
+          .style("font-size", "16px")
+          .style("text-decoration", "underline")
+          .style("font-family", "Arial")
+          .text("State Government: Payroll Data for March 2019 [Excluding Higher Ed]");
+
+        // load census state data
+        var stateData = await d3.json("./2019_state.json", d3.autoType);
+
+
+        //cleaning stateData
+        stateData.forEach((d, i) => {
+          d["Total March Payroll (whole dollars)"] = Number(d["Total March Payroll (whole dollars)"].replace(/,/g, ""));
+        });
+
+        stateData = stateData.filter((d) => { return d['State'] != "United States" && d["Total March Payroll (whole dollars)"] != 0 && d['Government Function'] != "Total - All Government Employment Functions" && d['Government Function'] != "Education Total" && d['Government Function'] != "Police Protection Total" && d['Government Function'] != "Education - Higher Education Total" && d['Government Function'] != "Education - Higher Education Instructional" && d['Government Function'] != "Education - Higher Education Other" && d['Government Function'] != "All other and unallocable" && d['Government Function'] != "Education - Elementary and Secondary Total" && d['Government Function'] != "Fire Protection Total"; })
+
+
+        //load state ids dataset
+        //this dataset is from Jeff Rzeszotarski's March 24th INFO 3300 Lecture
+        var stateIDs = await d3.tsv("./us-state-names.tsv");
+
+        //filter states not in our stateData from stateIDs
+        stateIDs = stateIDs.filter((d) => {
+          return d["name"] != "District of Columbia" && d["name"] != "America Samoa" && d["name"] != "Federated States of Micronesia" && d["name"] != "Palau" && d["name"] != "Guam" && d["name"] != "Marshall Islands" && d["name"] != "Northern Mariana Islands" && d["name"] != "Puerto Rico" && d["name"] != "U.S. Minor Outlying Islands" && d["name"] != "Virgin Islands of the United States";
+        })
+
+        let stateCounts = {};
+        let idToState = {}
+
+        //set up stateCounts to take strings and for strings to be equal to state names and to match state ids with names in idToState
+        stateIDs.forEach(row => {
+          stateCounts[row.name] = "";
+          idToState[row.id] = row.name;
+        });
+
+        //organizing the data by states
+
+        //this function was taken from https://learnwithparam.com/blog/how-to-group-by-array-of-objects-using-a-key/
+        const groupBy = (array, key) => {
+          return array.reduce((result, currentValue) => {
+            (result[currentValue[key]] = result[currentValue[key]] || []).push(
+              currentValue
+            );
+            return result;
+          }, {});
+        };
+
+        var sorted_data = groupBy(stateData, "State");
+
+
+        //This function is from https://stackoverflow.com/questions/9907419/how-to-get-a-key-in-a-javascript-object-by-its-value
+        function getKeyByValue(object, value) {
+          return Object.keys(object).find(key => object[key] === value);
+        }
+
+        //printing the max values and the assocaited keys
+        Object.keys(sorted_data).forEach(function (key) {
+          // key is the state
+          var values_list = [];
+          var final_statedic = {};
+          for (let k in sorted_data[key]) {
+
+            var gov = sorted_data[key][k]["Government Function"];
+            var num = sorted_data[key][k]["Total March Payroll (whole dollars)"];
+            //pushing all payroll values for the state
+            values_list.push(num);
+
+            //creating a dictionary to store the payroll value to the government function
+            final_statedic[gov] = num;
+          };
+
+          //finding the max value of the list and then finding the associated key
+          var max = Math.max.apply(null, values_list);
+          var government_func = getKeyByValue(final_statedic, max);
+
+          //update the stateCounts
+          stateCounts[key] = government_func;
+
+        });
+
+        //making array with only unique values of government functions from stateCounts
+        var uniqueGov = []
+        var stateGov = Object.values(stateCounts)
+        for (j of stateGov) {
+          if (!uniqueGov.includes(j)) {
+            uniqueGov.push(j)
+          }
+        }
+
+        // make color scale
+        const colorScale = d3.scaleOrdinal()
+          .domain(Object.values(uniqueGov))
+          .range(d3.schemeSet1);
+
+        //fill in states colors
+        map.selectAll(".state")
+          .style("fill", d => colorScale(stateCounts[idToState[d.id]]));
+
+        // legend code from http://bl.ocks.org/michellechandra/0b2ce4923dc9b5809922
+        var legend = d3.select("#map").append("svg")
+          .attr("class", "legend")
+          .attr("width", 400)
+          .attr("height", 500)
+          .selectAll("g")
+          .data(colorScale.domain())
+          .enter()
+          .append("g")
+          .attr("transform", function (d, i) { return "translate(0," + i * 20 + ")"; });
+
+        legend.append("rect")
+          .data(uniqueGov)
+          .attr("width", 18)
+          .attr("height", 18)
+          .style("fill", colorScale);
+
+        legend.append("text")
+          .data(uniqueGov)
+          .attr("x", 24)
+          .attr("y", 9)
+          .attr("dy", ".35em")
+          .text(function (d) { return d; });
+      }
+
+
+      requestData();
+
+    </script>
+  </p>
+
+</body>
+
+</html>
