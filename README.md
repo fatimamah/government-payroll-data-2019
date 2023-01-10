@@ -4,9 +4,16 @@ Info 3300: Data Driven Web Visalizations–Project 1
 
 Group Members: Fatima Mahmoud (fam76), Ayesha Kemal (ak2235), and Zoe Gonzalez-Llorens (zg226)
 
+To run web server, use `python -m http.server` for python 3
+
 ## Final Visualization
 
-![final visualization screenshots](image.jpg)
+![final bar graph](https://user-images.githubusercontent.com/58915939/211435863-73cffea6-313f-4ec9-a0bd-26ea3ddd761d.png)
+
+![final choropleth](https://user-images.githubusercontent.com/58915939/211435799-8d491615-8a56-4458-b480-52d6b705cecb.png)
+
+
+https://user-images.githubusercontent.com/58915939/211435480-59480408-e670-44c0-9ba4-39bd0320b215.mp4
 
 ## Data
 
